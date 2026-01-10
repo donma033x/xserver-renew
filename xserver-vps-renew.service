@@ -1,0 +1,16 @@
+[Unit]
+Description=XServer VPS Auto Renew
+After=network.target
+
+[Service]
+Type=oneshot
+User=exedev
+WorkingDirectory=/home/exedev/xserver-vps-renew
+Environment=DISPLAY=:99
+ExecStartPre=/usr/bin/Xvfb :99 -screen 0 1280x900x24 &
+ExecStart=/home/exedev/xserver-vps-renew/venv/bin/python /home/exedev/xserver-vps-renew/renew.py
+ExecStopPost=/usr/bin/pkill -f "Xvfb :99"
+TimeoutStartSec=300
+
+[Install]
+WantedBy=multi-user.target

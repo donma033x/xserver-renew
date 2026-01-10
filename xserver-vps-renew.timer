@@ -1,0 +1,10 @@
+[Unit]
+Description=Run XServer VPS Renew daily
+
+[Timer]
+# 每天早上9点运行 (日本时间)
+OnCalendar=*-*-* 09:00:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target
