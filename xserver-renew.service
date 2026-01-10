@@ -8,7 +8,7 @@ User=exedev
 # 修改为你的实际路径
 WorkingDirectory=/home/exedev/xserver-renew
 Environment=DISPLAY=:99
-ExecStart=/bin/bash -c 'Xvfb :99 -screen 0 1280x900x24 & sleep 2 && /home/exedev/.local/bin/uv run python /home/exedev/xserver-renew/renew.py; pkill -f "Xvfb :99"'
+ExecStart=/bin/bash -c 'Xvfb :99 -screen 0 1280x900x24 & sleep 2 && /home/exedev/.local/bin/uv run python /home/exedev/xserver-renew/xserver-renew.py; pkill -f "Xvfb :99"'
 TimeoutStartSec=300
 
 [Install]

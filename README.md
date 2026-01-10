@@ -76,7 +76,7 @@ nano .env  # 或使用其他编辑器
 
 ```bash
 cd xserver-renew
-xvfb-run uv run python renew.py
+xvfb-run uv run python xserver-renew.py
 ```
 
 ### 设置定时任务 (systemd)
@@ -120,7 +120,7 @@ systemctl list-timers xserver-renew.timer
 
 ## 文件说明
 
-- `renew.py` - 主脚本
+- `xserver-renew.py` - 主脚本
 - `pyproject.toml` - 项目配置和依赖
 - `.env.example` - 配置文件示例
 - `sessions/` - 会话保存目录
