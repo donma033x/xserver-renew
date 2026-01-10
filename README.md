@@ -46,8 +46,8 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 ### 3. 克隆项目并安装依赖
 
 ```bash
-git clone https://github.com/donma033x/xserver-vps-renew.git
-cd xserver-vps-renew
+git clone https://github.com/donma033x/xserver-renew.git
+cd xserver-renew
 
 # 使用 uv 安装依赖
 uv sync
@@ -75,7 +75,7 @@ nano .env  # 或使用其他编辑器
 ### 手动运行
 
 ```bash
-cd xserver-vps-renew
+cd xserver-renew
 xvfb-run uv run python renew.py
 ```
 
@@ -83,33 +83,33 @@ xvfb-run uv run python renew.py
 
 ```bash
 # 复制服务文件
-sudo cp xserver-vps-renew.service /etc/systemd/system/
-sudo cp xserver-vps-renew.timer /etc/systemd/system/
+sudo cp xserver-renew.service /etc/systemd/system/
+sudo cp xserver-renew.timer /etc/systemd/system/
 
 # 重新加载 systemd
 sudo systemctl daemon-reload
 
 # 启用并启动定时器
-sudo systemctl enable xserver-vps-renew.timer
-sudo systemctl start xserver-vps-renew.timer
+sudo systemctl enable xserver-renew.timer
+sudo systemctl start xserver-renew.timer
 
 # 查看状态
-systemctl status xserver-vps-renew.timer
+systemctl status xserver-renew.timer
 ```
 
-注意: 使用前需要修改 `xserver-vps-renew.service` 中的路径为你的实际路径。
+注意: 使用前需要修改 `xserver-renew.service` 中的路径为你的实际路径。
 
 ### 常用命令
 
 ```bash
 # 手动触发
-sudo systemctl start xserver-vps-renew.service
+sudo systemctl start xserver-renew.service
 
 # 查看日志
-journalctl -u xserver-vps-renew.service -f
+journalctl -u xserver-renew.service -f
 
 # 查看下次执行时间
-systemctl list-timers xserver-vps-renew.timer
+systemctl list-timers xserver-renew.timer
 ```
 
 ## 注意事项
@@ -124,8 +124,8 @@ systemctl list-timers xserver-vps-renew.timer
 - `pyproject.toml` - 项目配置和依赖
 - `.env.example` - 配置文件示例
 - `sessions/` - 会话保存目录
-- `xserver-vps-renew.service` - systemd 服务文件
-- `xserver-vps-renew.timer` - systemd 定时器文件
+- `xserver-renew.service` - systemd 服务文件
+- `xserver-renew.timer` - systemd 定时器文件
 
 ## 许可证
 
