@@ -1,0 +1,13 @@
+[project]
+name = "xserver-vps-renew"
+version = "1.0.0"
+description = "XServer VPS 免费VPS自动续期脚本"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "playwright>=1.40.0",
+    "requests>=2.31.0",
+]
+
+[dependency-groups]
+dev = []

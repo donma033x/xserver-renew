@@ -9,24 +9,50 @@
 5. 支持多账号
 6. Telegram 通知
 
-## 使用方法
+## 系统要求
 
-### 1. 安装依赖
+- Linux (Ubuntu/Debian)
+- Python 3.10+
+- uv (推荐) 或 pip
+
+## 安装
+
+### 1. 安装系统依赖
 
 ```bash
-cd ~/xserver-vps-renew
-python3 -m venv venv
-source venv/bin/activate
-pip install playwright requests
-playwright install chromium
+# Ubuntu/Debian
+sudo apt update
+sudo apt install -y xvfb
+
+# xvfb 用于在无显示器的服务器上运行浏览器
 ```
 
-### 2. 配置
+### 2. 安装 uv (如果未安装)
 
-复制 `.env.example` 为 `.env` 并填写：
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+### 3. 克隆项目并安装依赖
+
+```bash
+git clone https://github.com/donma033x/xserver-vps-renew.git
+cd xserver-vps-renew
+
+# 使用 uv 安装依赖
+uv sync
+
+# 安装 Playwright 浏览器
+uv run playwright install chromium
+```
+
+### 4. 配置
+
+复制 `.env.example` 为 `.env` 并填写配置：
 
 ```bash
 cp .env.example .env
+nano .env  # 或使用其他编辑器
 ```
 
 配置说明：
@@ -34,40 +60,63 @@ cp .env.example .env
 - `TELEGRAM_BOT_TOKEN`: Telegram Bot Token (可选)
 - `TELEGRAM_CHAT_ID`: Telegram Chat ID (可选)
 
-### 3. 手动运行
+## 使用方法
+
+### 手动运行
 
 ```bash
-cd ~/xserver-vps-renew
-source venv/bin/activate
-xvfb-run python3 renew.py
+cd xserver-vps-renew
+xvfb-run uv run python renew.py
 ```
 
-### 4. 定时任务
-
-已配置 systemd timer，每天早上9点运行：
+### 设置定时任务 (systemd)
 
 ```bash
+# 复制服务文件
+sudo cp xserver-vps-renew.service /etc/systemd/system/
+sudo cp xserver-vps-renew.timer /etc/systemd/system/
+
+# 重新加载 systemd
+sudo systemctl daemon-reload
+
+# 启用并启动定时器
+sudo systemctl enable xserver-vps-renew.timer
+sudo systemctl start xserver-vps-renew.timer
+
 # 查看状态
 systemctl status xserver-vps-renew.timer
+```
 
+注意: 使用前需要修改 `xserver-vps-renew.service` 中的路径为你的实际路径。
+
+### 常用命令
+
+```bash
 # 手动触发
 sudo systemctl start xserver-vps-renew.service
 
 # 查看日志
 journalctl -u xserver-vps-renew.service -f
+
+# 查看下次执行时间
+systemctl list-timers xserver-vps-renew.timer
 ```
 
 ## 注意事项
 
-1. XServer 免费VPS 只能在到期前1天进行续期
+1. **XServer 免费VPS 只能在到期前1天进行续期**
 2. 建议设置 Telegram 通知以便了解续期状态
 3. 脚本会保存会话，下次运行无需重新登录
 
 ## 文件说明
 
 - `renew.py` - 主脚本
-- `.env` - 配置文件
+- `pyproject.toml` - 项目配置和依赖
 - `.env.example` - 配置文件示例
 - `sessions/` - 会话保存目录
 - `xserver-vps-renew.service` - systemd 服务文件
 - `xserver-vps-renew.timer` - systemd 定时器文件
+
+## 许可证
+
+MIT

@@ -227,7 +227,7 @@ class XServerVPSRenewer:
         await asyncio.sleep(3)
         
         # 提取 VPS 信息
-        vps_list = await self.page.evaluate('''
+        vps_list = await self.page.evaluate(r'''
             () => {
                 const results = [];
                 const links = document.querySelectorAll('a');
@@ -267,7 +267,7 @@ class XServerVPSRenewer:
         await self.page.goto(detail_url, wait_until='domcontentloaded')
         await asyncio.sleep(2)
         
-        expiry = await self.page.evaluate('''
+        expiry = await self.page.evaluate(r'''
             () => {
                 const text = document.body.innerText;
                 const match = text.match(/利用期限[\s\S]*?(\d{4}年\d{1,2}月\d{1,2}日)/);
