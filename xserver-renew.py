@@ -7,20 +7,19 @@ new Env('xserver-renew')
 
 环境变量:
     XSERVER_ACCOUNTS: 账号密码，格式 email:password，多个用 & 分隔
-    CAPTCHA_API_URL: OCR API 地址
-    YESCAPTCHA_KEY: YesCaptcha API Key (可选，用于解决 Turnstile)
+    CAPTCHA_API_URL: OCR API 地址 (日文验证码识别)
+    YESCAPTCHA_KEY: YesCaptcha API Key (解决 Turnstile，必需)
     TELEGRAM_BOT_TOKEN: Telegram机器人Token (可选)
     TELEGRAM_CHAT_ID: Telegram聊天ID (可选)
 
-注意: XServer 的 Turnstile 验证在虚拟显示器(xvfb)环境下可能无法通过。
-      如果遇到 Turnstile 超时，可以:
-      1. 配置 YESCAPTCHA_KEY 使用打码平台
-      2. 在有真实显示器的机器上运行
+重要: XServer 的 Turnstile 在 xvfb 虚拟显示器环境无法自动通过，
+      必须配置 YESCAPTCHA_KEY 使用打码平台解决。
 """
 
 import os
 import asyncio
 import json
+import time
 import requests
 from pathlib import Path
 from datetime import datetime
@@ -65,7 +64,7 @@ async def cdp_click(cdp, x, y):
     })
 
 def ocr_captcha(img_src):
-    """调用 OCR API 识别验证码"""
+    """调用 OCR API 识别日文验证码"""
     try:
         r = requests.post(CAPTCHA_API_URL, data=img_src, headers={'Content-Type': 'text/plain'}, timeout=30)
         result = r.text.strip()
@@ -75,12 +74,13 @@ def ocr_captcha(img_src):
         Logger.log("OCR", f"失败: {e}", "WARN")
         return None
 
-def solve_turnstile_api(url):
+def solve_turnstile_yescaptcha(url):
     """使用 YesCaptcha 解决 Turnstile"""
     if not YESCAPTCHA_KEY:
+        Logger.log("Turnstile", "未配置 YESCAPTCHA_KEY，无法解决", "WARN")
         return None
     
-    Logger.log("Turnstile", "使用 YesCaptcha...", "WAIT")
+    Logger.log("Turnstile", "使用 YesCaptcha 解决...", "WAIT")
     try:
         # 创建任务
         r = requests.post("https://api.yescaptcha.com/createTask", json={
@@ -93,13 +93,13 @@ def solve_turnstile_api(url):
         }, timeout=30)
         data = r.json()
         if data.get('errorId'):
-            Logger.log("Turnstile", f"创建任务失败: {data}", "WARN")
+            Logger.log("Turnstile", f"创建任务失败: {data.get('errorDescription')}", "WARN")
             return None
         task_id = data.get('taskId')
+        Logger.log("Turnstile", f"任务 ID: {task_id}", "INFO")
         
         # 轮询结果
-        for _ in range(60):
-            import time
+        for i in range(60):
             time.sleep(3)
             r = requests.post("https://api.yescaptcha.com/getTaskResult", json={
                 "clientKey": YESCAPTCHA_KEY,
@@ -108,11 +108,13 @@ def solve_turnstile_api(url):
             data = r.json()
             if data.get('status') == 'ready':
                 token = data['solution']['token']
-                Logger.log("Turnstile", f"YesCaptcha 成功 ({len(token)} chars)", "OK")
+                Logger.log("Turnstile", f"成功! token 长度: {len(token)}", "OK")
                 return token
             if data.get('errorId'):
-                Logger.log("Turnstile", f"错误: {data}", "WARN")
+                Logger.log("Turnstile", f"错误: {data.get('errorDescription')}", "WARN")
                 return None
+            if i % 5 == 0:
+                Logger.log("Turnstile", f"等待中... ({i*3}s)", "WAIT")
         
         Logger.log("Turnstile", "YesCaptcha 超时", "WARN")
         return None
@@ -120,7 +122,7 @@ def solve_turnstile_api(url):
         Logger.log("Turnstile", f"YesCaptcha 错误: {e}", "WARN")
         return None
 
-async def handle_turnstile(page, cdp, max_wait=30):
+async def handle_turnstile(page, cdp, max_wait=15):
     """处理 Turnstile 验证"""
     Logger.log("Turnstile", "等待验证...", "WAIT")
     
@@ -134,6 +136,7 @@ async def handle_turnstile(page, cdp, max_wait=30):
         Logger.log("Turnstile", "未找到元素", "INFO")
         return True
     
+    # 先尝试 CDP 点击
     x = int(turnstile['x'] + 30)
     y = int(turnstile['y'] + 32)
     Logger.log("Turnstile", f"点击 ({x}, {y})", "INFO")
@@ -147,18 +150,19 @@ async def handle_turnstile(page, cdp, max_wait=30):
             Logger.log("Turnstile", "验证完成", "OK")
             return True
     
-    # CDP 点击失败，尝试 YesCaptcha
-    if YESCAPTCHA_KEY:
-        token = solve_turnstile_api(page.url)
-        if token:
-            await page.evaluate(f'''() => {{
-                const input = document.querySelector('input[name="cf-turnstile-response"]');
-                if (input) input.value = "{token}";
-            }}''')
-            Logger.log("Turnstile", "已注入 YesCaptcha token", "OK")
-            return True
+    Logger.log("Turnstile", "CDP 点击超时，尝试 YesCaptcha", "INFO")
     
-    Logger.log("Turnstile", "验证超时", "WARN")
+    # CDP 点击失败，使用 YesCaptcha
+    token = solve_turnstile_yescaptcha(page.url)
+    if token:
+        await page.evaluate(f'''() => {{
+            const input = document.querySelector('input[name="cf-turnstile-response"]');
+            if (input) input.value = "{token}";
+        }}''')
+        Logger.log("Turnstile", "已注入 YesCaptcha token", "OK")
+        return True
+    
+    Logger.log("Turnstile", "验证失败", "WARN")
     return False
 
 def send_telegram(msg):
@@ -206,7 +210,7 @@ async def renew_account(playwright, email, password):
                 pass
         
         # 登录
-        await page.goto(LOGIN_URL)
+        await page.goto(LOGIN_URL, timeout=60000)
         await asyncio.sleep(3)
         
         if "login" in page.url:
@@ -228,7 +232,7 @@ async def renew_account(playwright, email, password):
             Logger.log("登录", "成功", "OK")
         
         # 访问 VPS 列表
-        await page.goto(VPS_INDEX_URL)
+        await page.goto(VPS_INDEX_URL, timeout=60000)
         await asyncio.sleep(3)
         
         # 获取 VPS 详情页链接
@@ -238,7 +242,7 @@ async def renew_account(playwright, email, password):
             return result
         
         # 访问详情页找续期链接
-        await page.goto(f"https://secure.xserver.ne.jp{detail_href}")
+        await page.goto(f"https://secure.xserver.ne.jp{detail_href}", timeout=60000)
         await asyncio.sleep(2)
         
         extend_href = await page.evaluate("document.querySelector('a[href*=\"extend\"]')?.getAttribute('href')")
@@ -249,7 +253,7 @@ async def renew_account(playwright, email, password):
         Logger.log("续期", "找到续期链接", "OK")
         
         # 访问续期页面
-        await page.goto(f"https://secure.xserver.ne.jp{extend_href}")
+        await page.goto(f"https://secure.xserver.ne.jp{extend_href}", timeout=60000)
         await asyncio.sleep(3)
         
         # 点击"继续使用免费VPS"
@@ -270,17 +274,27 @@ async def renew_account(playwright, email, password):
         # 处理 Turnstile
         turnstile_ok = await handle_turnstile(page, cdp)
         if not turnstile_ok:
-            result["msg"] = "Turnstile 验证失败"
+            result["msg"] = "Turnstile 验证失败（需配置 YESCAPTCHA_KEY）"
             return result
         
+        # 等待按钮可用
+        await asyncio.sleep(2)
+        
         # 提交
-        await page.click('button:has-text("継続"), input[type="submit"]')
-        Logger.log("续期", "已提交", "OK")
+        submit_btn = await page.query_selector('button:has-text("継続"):not([disabled]), input[type="submit"]:not([disabled])')
+        if submit_btn:
+            await submit_btn.click()
+            Logger.log("续期", "已提交", "OK")
+        else:
+            # 按钮可能还是 disabled，强制点击
+            await page.click('button:has-text("継続"), input[type="submit"]', force=True)
+            Logger.log("续期", "强制提交", "OK")
+        
         await asyncio.sleep(5)
         
         # 检查结果
         page_text = await page.evaluate('() => document.body.innerText')
-        if "完了" in page_text or "更新" in page_text:
+        if "完了" in page_text or "更新" in page_text or "継続" in page_text:
             result["success"] = True
             result["msg"] = "续期成功"
         else:
@@ -310,7 +324,9 @@ async def main():
     
     Logger.log("配置", f"共 {len(accounts)} 个账号", "INFO")
     if YESCAPTCHA_KEY:
-        Logger.log("配置", "YesCaptcha 已配置", "INFO")
+        Logger.log("配置", "YesCaptcha 已配置", "OK")
+    else:
+        Logger.log("配置", "警告: 未配置 YESCAPTCHA_KEY，Turnstile 可能失败", "WARN")
     
     results = []
     async with async_playwright() as playwright:
