@@ -6,7 +6,7 @@ cron: 0 10 * * *
 new Env('xserver-renew')
 
 环境变量:
-    XSERVER_ACCOUNTS: 账号密码，格式 email:password，多个用 & 分隔
+    ACCOUNTS_XSERVER: 账号密码，格式 email:password，多个用 & 分隔
     CAPTCHA_API_URL: OCR API 地址 (日文验证码识别)
     YESCAPTCHA_KEY: YesCaptcha API Key (解决 Turnstile，必需)
     TELEGRAM_BOT_TOKEN: Telegram机器人Token (可选)
@@ -26,7 +26,7 @@ from datetime import datetime
 from playwright.async_api import async_playwright
 
 # ==================== 配置 ====================
-ACCOUNTS_STR = os.environ.get('XSERVER_ACCOUNTS', '')
+ACCOUNTS_STR = os.environ.get('ACCOUNTS_XSERVER', '')
 TG_BOT_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN', '')
 TG_USER_ID = os.environ.get('TELEGRAM_CHAT_ID', '')
 CAPTCHA_API_URL = os.environ.get('CAPTCHA_API_URL', 'https://captcha-120546510085.asia-northeast1.run.app')
@@ -318,7 +318,7 @@ async def main():
     
     accounts = parse_accounts(ACCOUNTS_STR)
     if not accounts:
-        print("错误: 未配置 XSERVER_ACCOUNTS 环境变量")
+        print("错误: 未配置 ACCOUNTS_XSERVER 环境变量")
         print("格式: email:password 或 email1:pass1&email2:pass2")
         return
     
