@@ -297,6 +297,28 @@ async def renew_account(playwright, email, password):
         if "完了" in page_text or "更新" in page_text or "継続" in page_text:
             result["success"] = True
             result["msg"] = "续期成功"
+            
+            # 获取到期时间
+            expire_date = await page.evaluate('''
+                () => {
+                    // 尝试从页面找到期时间，通常格式如 2025年02月20日 或 2025/02/20
+                    const text = document.body.innerText;
+                    // 匹配日期格式
+                    const patterns = [
+                        /有効期限[：:]?\s*([0-9]{4}[年\/\-][0-9]{1,2}[月\/\-][0-9]{1,2}日?)/,
+                        /期限[：:]?\s*([0-9]{4}[年\/\-][0-9]{1,2}[月\/\-][0-9]{1,2}日?)/,
+                        /([0-9]{4}年[0-9]{1,2}月[0-9]{1,2}日)\s*まで/,
+                    ];
+                    for (const p of patterns) {
+                        const m = text.match(p);
+                        if (m) return m[1];
+                    }
+                    return null;
+                }
+            ''')
+            if expire_date:
+                result["msg"] = f"续期成功，到期时间: {expire_date}"
+                Logger.log("续期", f"到期时间: {expire_date}", "OK")
         else:
             result["msg"] = "续期结果未知"
         
