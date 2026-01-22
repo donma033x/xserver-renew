@@ -114,8 +114,7 @@ systemctl list-timers xserver-renew.timer
 1. **XServer 免费VPS 只能在到期前1天进行续期**
 2. **必须配置 YESCAPTCHA_KEY** - Turnstile 验证需要打码平台支持
 3. 建议设置 Telegram 通知以便了解续期状态
-4. 脚本会保存会话，下次运行无需重新登录
-5. 续期成功会对比原到期时间和新到期时间确认
+4. 续期成功会对比原到期时间和新到期时间确认
 
 ## 文件说明
 
