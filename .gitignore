@@ -1,11 +1,13 @@
 # Virtual environment
 venv/
+.venv/
 
 # Environment file with secrets
 .env
 
-# Sessions
+# Sessions and debug
 sessions/
+debug/
 
 # Logs
 *.log
@@ -17,3 +19,6 @@ __pycache__/
 # IDE
 .vscode/
 .idea/
+
+# Lock file
+uv.lock
